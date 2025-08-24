@@ -90,6 +90,7 @@ cd deployment/scripts
 ```
 azure-hub-spoke-network/
 ├── 📄 README.md                          # This file
+├── 📜 LICENSE                            # MIT License
 ├── 🚀 test-deployment.sh                 # Quick test deployment
 ├── 🗂️ deployment/
 │   ├── 📜 scripts/                       # Bash deployment scripts
@@ -106,10 +107,17 @@ azure-hub-spoke-network/
 ├── 🧪 testing/
 │   └── connectivity-tests.sh            # Network validation tests
 ├── 📊 monitoring/
-│   └── queries/                         # Sample KQL queries
+│   ├── queries/
+│   │   └── network-analytics.kql        # KQL queries for Log Analytics
+│   ├── dashboards/
+│   │   └── network-overview-dashboard.json  # Azure dashboard template
+│   └── alerts/
+│       └── network-alerts-config.sh     # Monitoring alerts setup
 ├── 📖 docs/
+│   ├── architecture/
+│   │   └── hub-spoke-diagram.svg        # Network architecture diagram
 │   └── deployment/
-│       └── step-by-step-guide.md       # Detailed deployment guide
+│       └── step-by-step-guide.md        # Detailed deployment guide
 └── ⚙️ .github/
     └── workflows/                       # CI/CD pipelines
         └── validate-templates.yml       # Template validation
@@ -174,11 +182,10 @@ azure-hub-spoke-network/
 
 | Document | Description |
 |----------|-------------|
-| [🚀 Quick Start](docs/deployment/step-by-step-guide.md) | Complete deployment walkthrough |
-| [🏗️ Architecture Guide](docs/architecture/architecture-overview.md) | Detailed architecture explanation |
-| [🔒 Security Design](docs/architecture/security-design.md) | Security implementation details |
-| [🔧 Operations Guide](docs/operations/monitoring-guide.md) | Day-to-day operations and maintenance |
-| [❓ Troubleshooting](docs/deployment/troubleshooting.md) | Common issues and solutions |
+| [🚀 Step-by-Step Guide](docs/deployment/step-by-step-guide.md) | Complete deployment walkthrough |
+| [🏗️ Architecture Diagram](docs/architecture/hub-spoke-diagram.svg) | Visual network topology |
+| [📊 KQL Queries](monitoring/queries/network-analytics.kql) | Log Analytics monitoring queries |
+| [⚠️ Connectivity Tests](testing/connectivity-tests.sh) | Network validation scripts |
 
 ## 💰 Cost Estimates
 
