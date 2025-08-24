@@ -3,7 +3,7 @@
 [![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fyungkolt%2Fazure-hub-spoke-network%2Fmain%2Fdeployment%2Farm-templates%2Fmain.json)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Azure](https://img.shields.io/badge/Azure-Hub--Spoke-blue)](https://azure.microsoft.com/)
-[![Terraform](https://img.shields.io/badge/Terraform-v1.0+-blue.svg)](https://www.terraform.io/)
+[![ARM Templates](https://img.shields.io/badge/ARM-Templates-orange)](https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/)
 
 ## 🏗️ Architecture Overview
 
@@ -15,10 +15,10 @@ This repository contains a complete implementation of Microsoft Azure's recommen
 
 - **🛡️ Enterprise Security**: Zero-trust network design with Azure Firewall and NSGs
 - **📈 Scalable Architecture**: Modular spoke design for easy expansion
-- **⚙️ Infrastructure as Code**: Multiple deployment options (ARM, Terraform, Scripts)
-- **📊 Monitoring & Observability**: Comprehensive logging and alerting
+- **⚙️ Infrastructure as Code**: ARM templates and automated deployment scripts
+- **📊 Monitoring & Observability**: Comprehensive logging and alerting with KQL queries
 - **💰 Cost Optimization**: Right-sized resources with cost monitoring
-- **📚 Well-Documented**: Detailed documentation and runbooks
+- **📚 Well-Documented**: Detailed documentation and architecture diagrams
 
 ## 🚀 Quick Start
 
