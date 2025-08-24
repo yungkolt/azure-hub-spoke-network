@@ -1,0 +1,36 @@
+// Network Flow Analysis
+AzureNetworkAnalytics_CL
+| where TimeGenerated > ago(1h)
+| where SubType_s == "FlowLog"
+| summarize TotalFlows = count() by SrcIP_s, DestIP_s, DestPort_d
+| order by TotalFlows desc
+| limit 20
+
+// Azure Firewall Application Rules
+AzureDiagnostics
+| where Category == "AzureFirewallApplicationRule"
+| where msg_s contains "Deny"
+| summarize Count = count() by SourceIP = split(msg_s, " ")[3], TargetURL = split(msg_s, " ")[6]
+| order by Count desc
+
+// Network Security Group Events
+AzureDiagnostics
+| where Category == "NetworkSecurityGroupEvent"
+| where type_s == "block"
+| summarize Count = count() by primaryIPv4Address_s, direction_s, ruleName_s
+| order by Count desc
+
+// Top Talkers by Data Transfer
+AzureNetworkAnalytics_CL
+| where TimeGenerated > ago(24h)
+| where SubType_s == "FlowLog"
+| summarize TotalBytes = sum(OutboundBytes_d + InboundBytes_d) by SrcIP_s
+| order by TotalBytes desc
+| limit 10
+
+// Firewall Health Check
+AzureDiagnostics
+| where Category == "AzureFirewallApplicationRule" or Category == "AzureFirewallNetworkRule"
+| where TimeGenerated > ago(1h)
+| summarize Count = count() by Action_s, bin(TimeGenerated, 5m)
+| render timechart
