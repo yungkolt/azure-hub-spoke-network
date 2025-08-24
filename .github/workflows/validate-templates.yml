@@ -1,0 +1,52 @@
+name: Validate Templates
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate-arm:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: Validate ARM Templates
+      run: |
+        az deployment group validate \
+          --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
+          --template-file deployment/arm-templates/main.json \
+          --parameters deployment/arm-templates/parameters/test.parameters.json
+
+  validate-terraform:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+    
+    - name: Terraform Init
+      run: terraform init
+      working-directory: deployment/terraform
+    
+    - name: Terraform Validate
+      run: terraform validate
+      working-directory: deployment/terraform
+    
+    - name: Terraform Plan
+      run: terraform plan
+      working-directory: deployment/terraform
+      env:
+        ARM_CLIENT_ID: ${{ secrets.ARM_CLIENT_ID }}
+        ARM_CLIENT_SECRET: ${{ secrets.ARM_CLIENT_SECRET }}
+        ARM_SUBSCRIPTION_ID: ${{ secrets.ARM_SUBSCRIPTION_ID }}
+        ARM_TENANT_ID: ${{ secrets.ARM_TENANT_ID }}

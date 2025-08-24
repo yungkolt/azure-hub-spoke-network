@@ -1,0 +1,80 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "Location for all resources"
+            }
+        },
+        "hubVnetName": {
+            "type": "string",
+            "defaultValue": "vnet-hub-eastus",
+            "metadata": {
+                "description": "Name of the hub virtual network"
+            }
+        },
+        "hubVnetPrefix": {
+            "type": "string",
+            "defaultValue": "10.0.0.0/16",
+            "metadata": {
+                "description": "Address prefix for the hub virtual network"
+            }
+        }
+    },
+    "variables": {
+        "hubVnetSubnets": [
+            {
+                "name": "subnet-gateway",
+                "addressPrefix": "10.0.0.0/27"
+            },
+            {
+                "name": "AzureFirewallSubnet",
+                "addressPrefix": "10.0.1.0/26"
+            },
+            {
+                "name": "AzureBastionSubnet",
+                "addressPrefix": "10.0.2.0/27"
+            },
+            {
+                "name": "subnet-shared-services",
+                "addressPrefix": "10.0.3.0/24"
+            }
+        ]
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "apiVersion": "2021-02-01",
+            "name": "[parameters('hubVnetName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[parameters('hubVnetPrefix')]"
+                    ]
+                },
+                "copy": [
+                    {
+                        "name": "subnets",
+                        "count": "[length(variables('hubVnetSubnets'))]",
+                        "input": {
+                            "name": "[variables('hubVnetSubnets')[copyIndex('subnets')].name]",
+                            "properties": {
+                                "addressPrefix": "[variables('hubVnetSubnets')[copyIndex('subnets')].addressPrefix]"
+                            }
+                        }
+                    }
+                ]
+            }
+        }
+    ],
+    "outputs": {
+        "hubVnetId": {
+            "type": "string",
+            "value": "[resourceId('Microsoft.Network/virtualNetworks', parameters('hubVnetName'))]"
+        }
+    }
+}
