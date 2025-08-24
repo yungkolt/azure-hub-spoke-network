@@ -1,0 +1,245 @@
+// Azure Hub-and-Spoke Network Analytics Queries
+// Author: yungkolt
+// Description: KQL queries for monitoring hub-and-spoke network architecture
+
+// =============================================================================
+// 1. NETWORK FLOW ANALYSIS
+// =============================================================================
+
+// Top network flows in the last hour
+AzureNetworkAnalytics_CL
+| where TimeGenerated > ago(1h)
+| where SubType_s == "FlowLog"
+| summarize TotalFlows = count(), TotalBytes = sum(InboundBytes_d + OutboundBytes_d) by SrcIP_s, DestIP_s, DestPort_d
+| order by TotalFlows desc
+| limit 20
+
+// Network traffic by spoke (identify spoke networks by IP ranges)
+AzureNetworkAnalytics_CL
+| where TimeGenerated > ago(24h)
+| where SubType_s == "FlowLog"
+| extend SpokeNetwork = case(
+    SrcIP_s startswith "10.1.", "Production",
+    SrcIP_s startswith "10.2.", "Development", 
+    SrcIP_s startswith "10.3.", "DMZ",
+    SrcIP_s startswith "10.0.", "Hub",
+    "External"
+)
+| summarize TotalBytes = sum(InboundBytes_d + OutboundBytes_d) by SpokeNetwork
+| order by TotalBytes desc
+
+// Inter-spoke communication patterns
+AzureNetworkAnalytics_CL
+| where TimeGenerated > ago(4h)
+| where SubType_s == "FlowLog"
+| extend SrcSpoke = case(
+    SrcIP_s startswith "10.1.", "Production",
+    SrcIP_s startswith "10.2.", "Development", 
+    SrcIP_s startswith "10.3.", "DMZ",
+    SrcIP_s startswith "10.0.", "Hub",
+    "External"
+)
+| extend DestSpoke = case(
+    DestIP_s startswith "10.1.", "Production",
+    DestIP_s startswith "10.2.", "Development", 
+    DestIP_s startswith "10.3.", "DMZ",
+    DestIP_s startswith "10.0.", "Hub",
+    "External"
+)
+| where SrcSpoke != DestSpoke
+| summarize FlowCount = count() by SrcSpoke, DestSpoke
+| order by FlowCount desc
+
+// =============================================================================
+// 2. AZURE FIREWALL MONITORING
+// =============================================================================
+
+// Firewall application rule hits (allowed traffic)
+AzureDiagnostics
+| where Category == "AzureFirewallApplicationRule"
+| where msg_s contains "Allow"
+| extend SourceIP = split(msg_s, " ")[3]
+| extend TargetURL = split(msg_s, " ")[6]
+| summarize Count = count() by tostring(SourceIP), tostring(TargetURL)
+| order by Count desc
+| limit 50
+
+// Firewall denied traffic analysis
+AzureDiagnostics
+| where Category == "AzureFirewallApplicationRule"
+| where msg_s contains "Deny"
+| extend SourceIP = split(msg_s, " ")[3]
+| extend TargetURL = split(msg_s, " ")[6]
+| extend Reason = split(msg_s, " ")[1]
+| summarize Count = count() by tostring(SourceIP), tostring(TargetURL), tostring(Reason)
+| order by Count desc
+| limit 30
+
+// Firewall network rule activity
+AzureDiagnostics
+| where Category == "AzureFirewallNetworkRule"
+| where TimeGenerated > ago(2h)
+| extend Action = split(msg_s, " ")[0]
+| extend Protocol = split(msg_s, " ")[1] 
+| extend SourceIP = split(msg_s, " ")[3]
+| extend DestIP = split(msg_s, " ")[5]
+| extend DestPort = split(msg_s, " ")[7]
+| summarize Count = count() by tostring(Action), tostring(Protocol), tostring(DestPort)
+| order by Count desc
+
+// Firewall health and performance
+AzureDiagnostics
+| where Category == "AzureFirewallApplicationRule" or Category == "AzureFirewallNetworkRule"
+| where TimeGenerated > ago(1h)
+| summarize Count = count() by bin(TimeGenerated, 5m), Category
+| render timechart
+
+// =============================================================================
+// 3. NETWORK SECURITY GROUP (NSG) ANALYSIS
+// =============================================================================
+
+// NSG blocked traffic by rule
+AzureDiagnostics
+| where Category == "NetworkSecurityGroupEvent"
+| where type_s == "block"
+| summarize Count = count() by ruleName_s, direction_s, primaryIPv4Address_s
+| order by Count desc
+| limit 25
+
+// NSG allowed traffic patterns
+AzureDiagnostics
+| where Category == "NetworkSecurityGroupEvent"
+| where type_s == "allow"
+| summarize Count = count() by ruleName_s, direction_s
+| order by Count desc
+
+// Top blocked IP addresses
+AzureDiagnostics
+| where Category == "NetworkSecurityGroupEvent"
+| where type_s == "block"
+| summarize BlockCount = count() by primaryIPv4Address_s
+| order by BlockCount desc
+| limit 20
+
+// =============================================================================
+// 4. CONNECTIVITY AND PERFORMANCE MONITORING
+// =============================================================================
+
+// Network latency analysis (if available)
+AzureNetworkAnalytics_CL
+| where TimeGenerated > ago(4h)
+| where SubType_s == "FlowLog"
+| where isnotnull(FlowStartTime_t) and isnotnull(FlowEndTime_t)
+| extend Duration = datetime_diff('second', FlowEndTime_t, FlowStartTime_t)
+| summarize AvgDuration = avg(Duration), MaxDuration = max(Duration) by SrcIP_s, DestIP_s
+| where AvgDuration > 0
+| order by AvgDuration desc
+
+// Top data consumers by VM/subnet
+AzureNetworkAnalytics_CL
+| where TimeGenerated > ago(24h)
+| where SubType_s == "FlowLog"
+| summarize TotalGB = sum(InboundBytes_d + OutboundBytes_d) / (1024*1024*1024) by SrcIP_s
+| order by TotalGB desc
+| limit 15
+
+// Connection success/failure rates
+AzureNetworkAnalytics_CL
+| where TimeGenerated > ago(2h)
+| where SubType_s == "FlowLog"
+| summarize SuccessfulConnections = countif(FlowStatus_s == "A"), 
+           FailedConnections = countif(FlowStatus_s == "D"),
+           TotalConnections = count() by bin(TimeGenerated, 10m)
+| extend SuccessRate = (SuccessfulConnections * 100.0) / TotalConnections
+| render timechart
+
+// =============================================================================
+// 5. SECURITY MONITORING QUERIES
+// =============================================================================
+
+// Suspicious outbound connections (non-standard ports)
+AzureNetworkAnalytics_CL
+| where TimeGenerated > ago(4h)
+| where SubType_s == "FlowLog"
+| where DestPort_d !in (80, 443, 53, 22, 3389, 25, 587, 993, 995)
+| where not(DestIP_s startswith "10.")  // Exclude internal traffic
+| summarize Count = count() by SrcIP_s, DestIP_s, DestPort_d
+| order by Count desc
+
+// Failed connection attempts (potential attacks)
+AzureNetworkAnalytics_CL
+| where TimeGenerated > ago(1h)
+| where SubType_s == "FlowLog" 
+| where FlowStatus_s == "D"  // Denied flows
+| summarize FailedAttempts = count() by SrcIP_s, DestIP_s, DestPort_d
+| where FailedAttempts > 10
+| order by FailedAttempts desc
+
+// Large data transfers (potential data exfiltration)
+AzureNetworkAnalytics_CL
+| where TimeGenerated > ago(2h)
+| where SubType_s == "FlowLog"
+| where OutboundBytes_d > 1000000000  // > 1GB outbound
+| project TimeGenerated, SrcIP_s, DestIP_s, OutboundBytes_d, InboundBytes_d
+| order by OutboundBytes_d desc
+
+// =============================================================================
+// 6. OPERATIONAL DASHBOARDS
+// =============================================================================
+
+// Network health overview
+AzureNetworkAnalytics_CL
+| where TimeGenerated > ago(1h)
+| where SubType_s == "FlowLog"
+| summarize 
+    TotalFlows = count(),
+    TotalGB = sum(InboundBytes_d + OutboundBytes_d) / (1024*1024*1024),
+    UniqueSourceIPs = dcount(SrcIP_s),
+    UniqueDestIPs = dcount(DestIP_s),
+    SuccessRate = countif(FlowStatus_s == "A") * 100.0 / count()
+| project ["Total Flows"] = TotalFlows, 
+          ["Total GB"] = round(TotalGB, 2),
+          ["Unique Sources"] = UniqueSourceIPs,
+          ["Unique Destinations"] = UniqueDestIPs, 
+          ["Success Rate %"] = round(SuccessRate, 1)
+
+// Firewall rule effectiveness
+AzureDiagnostics
+| where Category in ("AzureFirewallApplicationRule", "AzureFirewallNetworkRule")
+| where TimeGenerated > ago(6h)
+| extend Action = iff(msg_s contains "Allow", "Allow", "Deny")
+| summarize Count = count() by Action, bin(TimeGenerated, 30m)
+| render columnchart
+
+// =============================================================================
+// 7. TROUBLESHOOTING QUERIES
+// =============================================================================
+
+// Find communication paths between specific subnets
+let SourceSubnet = "10.1.1."; // Production web tier
+let DestSubnet = "10.1.2.";   // Production app tier
+AzureNetworkAnalytics_CL
+| where TimeGenerated > ago(2h)
+| where SubType_s == "FlowLog"
+| where SrcIP_s startswith SourceSubnet and DestIP_s startswith DestSubnet
+| project TimeGenerated, SrcIP_s, DestIP_s, DestPort_d, FlowStatus_s, InboundBytes_d, OutboundBytes_d
+| order by TimeGenerated desc
+
+// Check if specific VM can reach external services
+let VMPrivateIP = "10.1.1.4";  // Replace with actual VM IP
+AzureNetworkAnalytics_CL
+| where TimeGenerated > ago(1h)
+| where SubType_s == "FlowLog"
+| where SrcIP_s == VMPrivateIP
+| where not(DestIP_s startswith "10.")  // External traffic only
+| summarize Count = count(), TotalBytes = sum(OutboundBytes_d) by DestIP_s, DestPort_d
+| order by Count desc
+
+// Verify firewall routing is working
+AzureDiagnostics
+| where Category in ("AzureFirewallApplicationRule", "AzureFirewallNetworkRule") 
+| where TimeGenerated > ago(30m)
+| where msg_s contains "10.1." or msg_s contains "10.2." or msg_s contains "10.3."
+| project TimeGenerated, Category, msg_s
+| order by TimeGenerated desc
+| limit 50

@@ -1,0 +1,122 @@
+{
+  "properties": {
+    "lenses": {
+      "0": {
+        "order": 0,
+        "parts": {
+          "0": {
+            "position": {
+              "x": 0,
+              "y": 0,
+              "rowSpan": 4,
+              "colSpan": 6
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": "/subscriptions/{subscription-id}/resourcegroups/{resource-group}/providers/microsoft.operationalinsights/workspaces/{workspace-name}"
+                },
+                {
+                  "name": "Query",
+                  "value": "AzureNetworkAnalytics_CL\n| where TimeGenerated > ago(1h)\n| where SubType_s == \"FlowLog\"\n| summarize TotalFlows = count() by bin(TimeGenerated, 5m)\n| render timechart"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "PT1H"
+                }
+              ],
+              "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+              "settings": {
+                "content": {
+                  "title": "Network Flows Over Time",
+                  "subtitle": "Hub-and-Spoke Traffic"
+                }
+              }
+            }
+          },
+          "1": {
+            "position": {
+              "x": 6,
+              "y": 0,
+              "rowSpan": 4,
+              "colSpan": 6
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": "/subscriptions/{subscription-id}/resourcegroups/{resource-group}/providers/microsoft.operationalinsights/workspaces/{workspace-name}"
+                },
+                {
+                  "name": "Query",
+                  "value": "AzureDiagnostics\n| where Category == \"AzureFirewallApplicationRule\"\n| where TimeGenerated > ago(2h)\n| extend Action = iff(msg_s contains \"Allow\", \"Allow\", \"Deny\")\n| summarize Count = count() by Action, bin(TimeGenerated, 10m)\n| render columnchart"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "PT2H"
+                }
+              ],
+              "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+              "settings": {
+                "content": {
+                  "title": "Firewall Activity",
+                  "subtitle": "Allow vs Deny Actions"
+                }
+              }
+            }
+          },
+          "2": {
+            "position": {
+              "x": 0,
+              "y": 4,
+              "rowSpan": 4,
+              "colSpan": 12
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "ComponentId",
+                  "value": "/subscriptions/{subscription-id}/resourcegroups/{resource-group}/providers/microsoft.operationalinsights/workspaces/{workspace-name}"
+                },
+                {
+                  "name": "Query",
+                  "value": "AzureNetworkAnalytics_CL\n| where TimeGenerated > ago(24h)\n| where SubType_s == \"FlowLog\"\n| extend SpokeNetwork = case(\n    SrcIP_s startswith \"10.1.\", \"Production\",\n    SrcIP_s startswith \"10.2.\", \"Development\", \n    SrcIP_s startswith \"10.3.\", \"DMZ\",\n    SrcIP_s startswith \"10.0.\", \"Hub\",\n    \"External\"\n)\n| summarize TotalBytes = sum(InboundBytes_d + OutboundBytes_d) / (1024*1024*1024) by SpokeNetwork\n| render piechart"
+                },
+                {
+                  "name": "TimeRange",
+                  "value": "P1D"
+                }
+              ],
+              "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+              "settings": {
+                "content": {
+                  "title": "Data Usage by Spoke Network",
+                  "subtitle": "Traffic Distribution (GB)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "metadata": {
+      "model": {
+        "timeRange": {
+          "value": {
+            "relative": {
+              "duration": 24,
+              "timeUnit": 1
+            }
+          }
+        }
+      }
+    }
+  },
+  "name": "Hub-and-Spoke Network Overview",
+  "type": "Microsoft.Portal/dashboards",
+  "location": "INSERT_LOCATION",
+  "tags": {
+    "hidden-title": "Hub-and-Spoke Network Overview"
+  }
+}
