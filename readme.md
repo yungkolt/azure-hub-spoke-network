@@ -4,6 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Azure](https://img.shields.io/badge/Azure-Hub--Spoke-blue)](https://azure.microsoft.com/)
 [![ARM Templates](https://img.shields.io/badge/ARM-Templates-orange)](https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/yungkolt/azure-hub-spoke-network/validate-templates.yml?branch=main)](https://github.com/yungkolt/azure-hub-spoke-network/actions)
 
 ## 🏗️ Architecture Overview
 
